@@ -4,8 +4,7 @@ import yaml
 import logging
 from pathlib import Path
 import os
-
-# بنخلي TensorFlow ميزعجناش بالتحذيرات
+#for suppressing TensorFlow warnings during evaluation (optional)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 from tensorflow.keras.models import load_model
 from sklearn.metrics import classification_report, confusion_matrix, precision_recall_fscore_support, precision_recall_curve
@@ -22,7 +21,7 @@ logger = logging.getLogger(__name__)
 def run_evaluation():
     logger.info("--- Starting Evaluation Pipeline ---")
     
-    # 1. Load Data (هنجيب داتا الاختبار اللي فيها الهجمات)
+    # 1. Load Data
     loader = SWaTDataLoader()
     test_data_path = loader.config['data'].get('test_data_path', 'data/raw/merged.csv') 
     test_df = loader.load_csv_robust(test_data_path)
@@ -31,14 +30,14 @@ def run_evaluation():
     preprocessor = SWaTPreProcessor()
     clean_df = preprocessor.run_pipeline(test_df)
     
-    # نحتفظ بالإجابات النموذجية (True Labels) عشان نصحح للموديل
+    # to save the true labels for evaluation later
     y_true = clean_df['label'].values
     
     # 3. Feature Engineering (Inference Mode -> is_train=False)
     engineer = SWaTFeatureEngineer()
     final_df = engineer.run_pipeline(clean_df, is_train=False)
     
-    # نشيل عمود الـ label قبل ما ندخل الداتا للموديل
+    # before dropping the label column, we need to ensure that all feature columns are present in the same order as during training
     X_test = final_df.drop(columns=['label']).values
     
     # 4. Load Saved Model & Threshold
@@ -66,23 +65,23 @@ def run_evaluation():
     mse = np.mean(np.power(X_test - X_pred, 2), axis=1)
     
     # ---------------------------------------------------------
-    # --- السلاح الأول: صيد العتبة المثالية (Optimal Threshold) ---
+    #           ---Optimal Threshold ---
     # ---------------------------------------------------------
     logger.info("Calculating optimal threshold to maximize F1-Score...")
     precisions, recalls, thresholds_curve = precision_recall_curve(y_true, mse)
+    #calculate F1-Score for each threshold (excluding the last one to match lengths)
     
-    # حساب الـ F1-Score لكل العتبات (بنتجاهل آخر قيمة عشان أطوال المصفوفات تتطابق)
-    # ضفنا 1e-10 عشان نتجنب الـ Error بتاع القسمة على صفر
+    #1-added e-10 to avoid division by zero error in case precision + recall is zero
     f1_scores = 2 * (precisions[:-1] * recalls[:-1]) / (precisions[:-1] + recalls[:-1] + 1e-10)
+    # take the threshold that gives the maximum F1-Score
     
-    # نجيب العتبة اللي حققت أعلى F1-Score
     best_idx = np.argmax(f1_scores)
     best_threshold = thresholds_curve[best_idx]
     
     logger.info(f"💡 Optimal Threshold Found: {best_threshold:.6f}")
     logger.info(f"🚀 Expected Best F1-Score: {f1_scores[best_idx]:.4f}")
     
-    # 6. Evaluation (استخدام العتبة المثالية الجديدة بدل القديمة)
+    # 6. Evaluation with Optimal Threshold
     y_pred = (mse > best_threshold).astype(int)
     
     logger.info("--- Final Evaluation Results ---")

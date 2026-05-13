@@ -3,7 +3,7 @@ import os
 import logging
 from pathlib import Path
 
-# تظبيط مسار المشروع
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.data_loader import SWaTDataLoader
@@ -31,11 +31,13 @@ def run_full_pipeline():
         engineer = SWaTFeatureEngineer()
         df_final = engineer.run_pipeline(df_clean, is_train=True)
         
-        # نشيل عمود الـ label لو موجود عشان الـ Autoencoder بيتدرب Unsupervised
+        
+        #remove label column if it exists since Autoencoder is unsupervised
         if 'label' in df_final.columns:
             df_final = df_final.drop(columns=['label'])
             
-        # نحول الداتا لـ Numpy Array عشان Keras
+        
+        # convert final dataframe to numpy array for Keras
         X_train = df_final.values
         
         # 4. Model Training
@@ -43,7 +45,7 @@ def run_full_pipeline():
         input_dim = X_train.shape[1]
         autoencoder = SWaTAutoencoder(input_dim=input_dim)
         
-        # هندرب على عينة بس لو جهازك ضعيف، بس في الـ Production هندرب على كله
+        # for quick testing, we can train on a subset of the data, but in production we should train on the full dataset
         logger.info(f"Training on data shape: {X_train.shape}")
         autoencoder.train(X_train, epochs=20, batch_size=256)
         

@@ -1,21 +1,22 @@
 import pandas as pd
 import logging
 import yaml
-from pathlib import Path # ضفنا دي عشان مسار الملف الديناميكي
+from pathlib import Path 
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class SWaTPreProcessor:
     def __init__(self, config_path: str = None):
-        # تظبيط المسار الديناميكي عشان يشتغل من أي مكان
+        
+        #config dynamically based on where the script is run from
         if config_path is None:
             base_path = Path(__file__).parent.parent
             self.config_path = base_path / "configs" / "config.yaml"
         else:
             self.config_path = Path(config_path)
 
-        # ضفنا encoding='utf-8' لحل مشكلة الإيرور الأخير
+        #added encoding='utf-8' to fix the last error
         with open(self.config_path, "r", encoding='utf-8') as file:
             self.config = yaml.safe_load(file)
             

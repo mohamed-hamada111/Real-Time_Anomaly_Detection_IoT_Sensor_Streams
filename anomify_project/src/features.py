@@ -65,10 +65,10 @@ class SWaTFeatureEngineer:
         logger.info("--- Starting Feature Engineering Pipeline ---")
         
         if is_train:
-            # لو بندرب الموديل، بنحلل الداتا كلها ونتعرف على الأعمدة
+            #if we're training, we analyze the data to identify feature types and save the scaler based on the continuous features
             continuous_cols, binary_cols = self.identify_feature_types(df)
         else:
-            # الحل السحري: لو إحنا Inference، بنجيب الأعمدة اللي الـ Scaler حفظها وقت التدريب!
+            #magic trick: during inference, we load the scaler and extract the feature names it was fitted on to ensure we use the same continuous features as during training
             loaded_scaler = joblib.load(self.scaler_path)
             continuous_cols = list(loaded_scaler.feature_names_in_)
             logger.info(f"Extracted {len(continuous_cols)} continuous features directly from saved scaler.")
@@ -76,7 +76,7 @@ class SWaTFeatureEngineer:
         df_processed = self.scale_features(df, continuous_cols, is_train=is_train)
         df_processed = self.add_rolling_features(df_processed, continuous_cols)
         
-        # بنملى أي قيم فارغة بصفر عشان الموديل ميضربش إيرور
+        #fill any remaining NaN values with 0 (especially important for the rolling std which can have NaNs at the beginning)
         df_processed = df_processed.bfill().fillna(0)
         
         logger.info("--- Feature Engineering Completed ---")

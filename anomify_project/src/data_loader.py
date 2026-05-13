@@ -9,18 +9,19 @@ logger = logging.getLogger(__name__)
 class SWaTDataLoader:
     def __init__(self, config_path: str = None):
         if config_path is None:
-            # بيجيب مسار الفولدر اللي إحنا فيه ويرجع خطوة ويفتح configs
+            # take the config path dynamically based on where the script is run from
             base_path = Path(__file__).parent.parent
             self.config_path = base_path / "configs" / "config.yaml"
         else:
             self.config_path = Path(config_path)
             
-        # السطر ده لازم يكون هنا (بره الـ if والـ else) عشان يتنفذ في كل الحالات
+        # this line is added to fix the last error related to encoding when loading the config file
+
         self.config = self._load_config()
 
     def _load_config(self) -> dict:
         try:
-            # ضفنا هنا encoding='utf-8' عشان نحل مشكلة الويندوز
+            
             with open(self.config_path, "r", encoding='utf-8') as file:
                 config = yaml.safe_load(file)
             logger.info("Configuration loaded successfully.")
@@ -37,7 +38,8 @@ class SWaTDataLoader:
 
         for sep in [',', ';']:
             try:
-                # ضفنا هنا كمان encoding='utf-8' احتياطي للداتا
+               
+                #added encoding='utf-8' here as well just in case the data has encoding issues
                 df = pd.read_csv(file_path, sep=sep, low_memory=False, encoding='utf-8')
                 if df.shape[1] > 2:
                     df.columns = df.columns.str.strip()

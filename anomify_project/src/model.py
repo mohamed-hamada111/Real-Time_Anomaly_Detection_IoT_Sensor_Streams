@@ -21,7 +21,7 @@ class SWaTAutoencoder:
         self.input_dim = input_dim
         self.model_path = "models/autoencoder.h5"
         self.model = self._build_model()
-        self.threshold = None # هيتحدد بعد التدريب
+        self.threshold = None # calculated after training based on reconstruction error distribution
         
         Path("models").mkdir(parents=True, exist_ok=True)
 
@@ -37,7 +37,7 @@ class SWaTAutoencoder:
         encoded = Dropout(0.2)(encoded)
         encoded = Dense(32, activation='relu')(encoded)
         
-        # Bottleneck Layer (الضغط بيحصل هنا)
+        # Bottleneck Layer (compressed representation)
         bottleneck = Dense(16, activation='relu')(encoded)
         
         # Decoder Layer
@@ -45,7 +45,7 @@ class SWaTAutoencoder:
         decoded = Dropout(0.2)(decoded)
         decoded = Dense(64, activation='relu')(decoded)
         
-        # Output Layer (بيحاول يطلع نفس الداتا اللي دخلت)
+        # Output Layer (linear activation for reconstruction)
         output_layer = Dense(self.input_dim, activation='linear')(decoded)
         
         model = Model(inputs=input_layer, outputs=output_layer)
@@ -57,13 +57,13 @@ class SWaTAutoencoder:
         """Trains the Autoencoder on normal data."""
         logger.info("Starting model training...")
         
-        # هنوقف التدريب لو الموديل بطل يتحسن عشان نوفر وقت
+        # stopping training if the model stops improving to save time
         early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
-        # هنسيف أحسن موديل بس
+        # saving the best model during training based on validation loss
         checkpoint = ModelCheckpoint(self.model_path, monitor='val_loss', save_best_only=True)
         
         history = self.model.fit(
-            X_train, X_train, # في الـ Autoencoder الـ input هو هو الـ target
+            X_train, X_train, # autoencoder: input = target
             epochs=epochs,
             batch_size=batch_size,
             validation_split=validation_split,
@@ -82,13 +82,15 @@ class SWaTAutoencoder:
         """
         logger.info("Calculating anomaly threshold...")
         reconstructions = self.model.predict(X_train)
-        # بنحسب الـ Mean Squared Error لكل صف
-        mse = np.mean(np.power(X_train - reconstructions, 2), axis=1)
         
-        # Threshold = المتوسط + (3 * الانحراف المعياري)
+        #calculate the Mean Squared Error for each data point
+        mse = np.mean(np.power(X_train - reconstructions, 2), axis=1)
+       
+        #the threshold is set to the mean of the MSE plus 3 times the standard deviation, which is a common heuristic for anomaly detection
         self.threshold = np.mean(mse) + 3 * np.std(mse)
         
-        # هنسيف الـ Threshold عشان نستخدمه في الـ Inference
+        
+        #save the threshold to a YAML file for later use during inference
         threshold_path = "models/threshold.yaml"
         with open(threshold_path, 'w', encoding='utf-8') as f:
             yaml.dump({'anomaly_threshold': float(self.threshold)}, f)
@@ -118,6 +120,6 @@ class SWaTAutoencoder:
         reconstructions = self.model.predict(X_test)
         mse = np.mean(np.power(X_test - reconstructions, 2), axis=1)
         
-        # لو الـ MSE أكبر من الـ Threshold تبقى Anomaly (1), لو أقل تبقى Normal (0)
+        #if MSE is greater than threshold, it's an anomaly (1), otherwise it's normal (0)
         anomalies = (mse > self.threshold).astype(int)
         return anomalies
