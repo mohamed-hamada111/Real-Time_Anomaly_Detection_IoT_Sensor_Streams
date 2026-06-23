@@ -1,0 +1,19 @@
+# ==========================================
+# SWaT Anomaly Detection Configuration
+# ==========================================
+
+data:
+  normal_data_path: "data/raw/normal.csv"
+  attack_data_path: "data/raw/attack.csv"
+  merged_data_path: "data/raw/merged.csv"
+  processed_data_path: "data/processed/swat_combined_processed.csv"
+
+columns:
+  timestamp_col: "Timestamp"
+  label_col: "Normal/Attack"
+  
+  # هنحط أمثلة هنا، وممكن تزودهم براحتك بعدين
+  drop_cols: ["Unnamed: 0"] 
+
+pipeline:
+  rolling_window_size: 300  # 5 minutes window اللي إنت جربتها في الـ EDA
