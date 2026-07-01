@@ -6,7 +6,7 @@ import tensorflow as tf
 from tensorflow.keras.models import Model, load_model
 from tensorflow.keras.layers import (
     Input, LSTM, RepeatVector, TimeDistributed, 
-    Dense, Dropout, MultiHeadAttention, LayerNormalization
+    Dense, Dropout, MultiHeadAttention, LayerNormalization, Add
 )
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 
@@ -17,13 +17,13 @@ class SWaTAutoencoder:
     """
     Hybrid LSTM-Transformer (Attention) Autoencoder for Anomaly Detection.
     """
-    def __init__(self, input_dim: int, time_steps: int = 5, config_path: str = "configs/config.yaml"):
+    def __init__(self, input_dim: int, time_steps: int = 5, config_path: str = "../configs/config.yaml"):
         with open(config_path, "r", encoding='utf-8') as file:
             self.config = yaml.safe_load(file)
             
         self.input_dim = input_dim
         self.time_steps = time_steps
-        self.model_path = "models/autoencoder.h5"
+        self.model_path = "../models/autoencoder.keras"
         self.model = self._build_model()
         self.threshold = None 
         
@@ -41,8 +41,8 @@ class SWaTAutoencoder:
         
         
         attention_out = MultiHeadAttention(num_heads=2, key_dim=64)(x, x)
-        # Residual Connection & Normalization 
-        x = LayerNormalization()(x + attention_out)
+        # Residual Connection & Normalization
+        x = LayerNormalization()(Add()([x, attention_out]))
         x = Dropout(0.2)(x)
         
         # Bottleneck (Compression)
@@ -56,7 +56,7 @@ class SWaTAutoencoder:
         
         
         attention_out_dec = MultiHeadAttention(num_heads=2, key_dim=16)(x, x)
-        x = LayerNormalization()(x + attention_out_dec)
+        x = LayerNormalization()(Add()([x, attention_out_dec]))
         
         decoded = LSTM(64, activation='relu', return_sequences=True)(x)
         decoded = Dropout(0.2)(decoded)
@@ -95,7 +95,7 @@ class SWaTAutoencoder:
         
         self.threshold = np.mean(mse) + 3 * np.std(mse)
         
-        threshold_path = "models/threshold.yaml"
+        threshold_path = "../models/threshold.yaml"
         with open(threshold_path, 'w', encoding='utf-8') as f:
             yaml.dump({'anomaly_threshold': float(self.threshold)}, f)
             
@@ -108,7 +108,7 @@ class SWaTAutoencoder:
         
         self.model.load_weights(self.model_path)
         
-        threshold_path = "models/threshold.yaml"
+        threshold_path = "../models/threshold.yaml"
         if Path(threshold_path).exists():
             with open(threshold_path, 'r', encoding='utf-8') as f:
                 data = yaml.safe_load(f)

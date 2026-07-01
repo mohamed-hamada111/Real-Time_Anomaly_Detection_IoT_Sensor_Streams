@@ -1,0 +1,41 @@
+-- =========================================================================
+-- Anomify Stream Analytics job
+--
+-- INPUT  : Event Hub "raw-readings"      (1 event/second per device - matches
+--                                          SWaT's native 1 Hz sampling rate)
+-- OUTPUT : Event Hub "windowed-batches"  (1 event/second per device)
+--
+-- PURPOSE
+-- The model's feature pipeline (src/features.py) computes rolling
+-- mean/std over the last `rolling_window_size` = 300 raw readings (5
+-- minutes at 1 Hz - see configs/config.yaml) before the LSTM ever sees the
+-- data. A stateless Function only gets one event at a time, so on its own
+-- it has no way to recompute those rolling stats correctly.
+--
+-- Stream Analytics is purpose-built for exactly this: it keeps a
+-- continuously-advancing window of raw events in memory PER DEVICE and
+-- re-emits it every time the window slides, so the Function always
+-- receives a ready-to-use 300-row batch instead of having to manage that
+-- state itself (which would otherwise need a database/cache + a lot more
+-- code, just to reimplement what ASA already does natively).
+--
+-- HoppingWindow(second, 300, 1):
+--   window size  = 300s -> 300 readings at 1 Hz, matching rolling_window_size
+--   hop size     = 1s   -> emit a fresh window every second (one event in,
+--                           one window out). For lower cost/latency
+--                           trade-off in production, increase the hop (e.g.
+--                           hop=5) to score every 5s instead of every 1s.
+-- =========================================================================
+
+SELECT
+    deviceId,
+    System.Timestamp AS windowEnd,
+    Collect() AS readings
+INTO
+    [windowed-batches]
+FROM
+    [raw-readings]
+TIMESTAMP BY eventTime
+GROUP BY
+    deviceId,
+    HoppingWindow(second, 300, 1)
