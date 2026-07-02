@@ -51,3 +51,11 @@ class SWaTPreProcessor:
         df_clean = self.handle_missing_and_duplicates(df_clean)
         df_clean = self.encode_labels(df_clean)
         return df_clean
+    
+
+    if __name__ == "__main__":
+        import h5py
+
+        with h5py.File("../models/autoencoder.h5", "r") as f:
+            print(f.attrs.get("keras_version"))
+            print(f.attrs.get("backend"))
