@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class AnomifyLiveDetector:
     def __init__(self):
         base_path = Path(__file__).parent.parent
-        self.model_path = base_path / "models" / "autoencoder.h5"
+        self.model_path = base_path / "models" / "autoencoder.keras"
         self.threshold_path = base_path / "models" / "threshold.yaml"
         
         logger.info("⚙️ Initializing Anomify Real-Time Detector...")
@@ -65,12 +65,20 @@ class AnomifyLiveDetector:
         
         anomalies_caught = 0
         
-        for i in range(len(X)):
-            row = X[i:i+1]
+       # ⚠️ التعديل هنا: بناء النافذة الزمنية للـ LSTM
+        time_steps = 5
+        
+        # هنبدأ اللوب من بعد أول 5 قراءات عشان نقدر نجمع باقة كاملة
+        for i in range(time_steps, len(X)):
+            # سحب آخر 5 قراءات وتحويلهم لـ 3D
+            sequence = X[i - time_steps : i]
+            sequence_3d = np.expand_dims(sequence, axis=0) # Shape: (1, 5, 101)
+            
             true_label = labels[i] if labels is not None else "Unknown"
             
-            pred = self.model.predict(row, verbose=0)
-            mse = np.mean(np.power(row - pred, 2))
+            # إدخال الـ 3D Sequence للموديل
+            pred = self.model.predict(sequence_3d, verbose=0)
+            mse = np.mean(np.power(sequence_3d - pred, 2))
             
             is_anomaly = mse > self.threshold
             
@@ -81,7 +89,7 @@ class AnomifyLiveDetector:
                 if i % 10 == 0:  
                     logger.info(f"✅ Status Normal | MSE: {mse:.6f} | True Label: {true_label}")
             
-            time.sleep(0.02) 
+            time.sleep(0.02)
             
         print("\n" + "="*50)
         logger.info("🏁 --- STREAM ENDED --- 🏁")

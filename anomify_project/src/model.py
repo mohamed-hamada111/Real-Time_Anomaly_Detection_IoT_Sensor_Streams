@@ -23,7 +23,7 @@ class SWaTAutoencoder:
             
         self.input_dim = input_dim
         self.time_steps = time_steps
-        self.model_path = "models/autoencoder.h5"
+        self.model_path = "models/autoencoder.keras"
         self.model = self._build_model()
         self.threshold = None 
         
