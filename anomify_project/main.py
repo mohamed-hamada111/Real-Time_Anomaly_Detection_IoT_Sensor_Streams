@@ -1,4 +1,6 @@
 import os
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # لمنع رسائل التحذير المزعجة
 
 import sqlite3
@@ -57,9 +59,13 @@ app = FastAPI(
     description="REST API for Real-Time Anomaly Detection using LSTM-Attention"
 )
 
-# هيكل البيانات المتوقع من الحساسات (باقة من 5 قراءات، كل قراءة 101 ميزة)
 class SensorWindow(BaseModel):
     readings: list[list[float]]
+
+# التعديل الجديد: Data Model لاستقبال بيانات الإنذار فقط من Streamlit
+class AnomalyLog(BaseModel):
+    mse_score: float
+    threshold: float
 
 def log_anomaly_to_db(mse: float, threshold: float):
     """دالة خفيفة بتسجل الإنذار في الداتابيز في الخلفية"""
@@ -81,22 +87,17 @@ def log_anomaly_to_db(mse: float, threshold: float):
 @app.post("/predict")
 def predict_anomaly(data: SensorWindow, background_tasks: BackgroundTasks):
     try:
-        # 1. تحويل الداتا والتأكد من الأبعاد (5, 101)
         np_data = np.array(data.readings)
         if np_data.shape != (5, 101):
             raise HTTPException(status_code=400, detail=f"Expected shape (5, 101), got {np_data.shape}")
         
-        # 2. تجهيز الباقة للموديل (1, 5, 101)
         sequence_3d = np.expand_dims(np_data, axis=0)
         
-        # 3. التوقع الحسابي
         pred = model.predict(sequence_3d, verbose=0)
         mse = float(np.mean(np.power(sequence_3d - pred, 2)))
         
-        # 4. اتخاذ القرار
         is_anomaly = bool(mse > THRESHOLD)
         
-        # 5. لو في خطر، احفظ في الداتابيز فوراً (في الخلفية عشان منبطأش الرد)
         if is_anomaly:
             background_tasks.add_task(log_anomaly_to_db, mse, THRESHOLD)
             
@@ -109,3 +110,26 @@ def predict_anomaly(data: SensorWindow, background_tasks: BackgroundTasks):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# ==========================================
+# 5. المسار الجديد لتسجيل الإنذارات المكتشفة محلياً (التعديل الجديد)
+# ==========================================
+@app.post("/log_anomaly")
+def log_anomaly_endpoint(data: AnomalyLog, background_tasks: BackgroundTasks):
+    """مسار بيستقبل الإنذارات من Streamlit ويسجلها في الداتابيز"""
+    background_tasks.add_task(log_anomaly_to_db, data.mse_score, data.threshold)
+    return {"status": "success", "message": "Anomaly logged to SQLite successfully"}
+# ==========================================
+# 6. مسار جديد لقراءة الإنذارات (عشان n8n)
+# ==========================================
+@app.get("/get_alerts")
+def get_recent_alerts():
+    """مسار بيبعت أحدث 50 إنذار لأي نظام بيطلبه زي n8n"""
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row  # عشان نرجع الداتا كـ Dictionary
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM alerts ORDER BY id DESC LIMIT 50")
+    rows = cursor.fetchall()
+    conn.close()
+    
+    return {"alerts": [dict(row) for row in rows]}

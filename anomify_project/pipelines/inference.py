@@ -78,20 +78,16 @@ class AnomifyLiveDetector:
         
         anomalies_caught = 0
         
-        for j in range(stream_len):
-            end_idx = offset + j + 1
-            seq = X[max(0, end_idx - time_steps): end_idx]
-            if len(seq) < time_steps:
-                # Not enough real history yet (only happens right at the
-                # very start of the dataset) -> pad by repeating the first
-                # available row.
-                pad = np.repeat(seq[:1], time_steps - len(seq), axis=0)
-                seq = np.vstack([pad, seq])
-
-            row = seq.reshape(1, time_steps, seq.shape[1])
-            true_label = labels[offset + j] if labels is not None else "Unknown"
+        time_steps = 5
+        
+        for i in range(time_steps, len(X)):
+            # السطرين دول هما اللي بيعرفوا الـ sequence_3d وبيظبطوا الأبعاد
+            sequence = X[i - time_steps : i]
+            sequence_3d = np.expand_dims(sequence, axis=0) 
             
-            # إدخال الـ 3D Sequence للموديل
+            true_label = labels[i] if labels is not None else "Unknown"
+            
+            # دلوقتي الموديل هيلاقيه ويشتغل طبيعي
             pred = self.model.predict(sequence_3d, verbose=0)
             mse = np.mean(np.power(sequence_3d - pred, 2))
             
@@ -101,15 +97,10 @@ class AnomifyLiveDetector:
                 anomalies_caught += 1
                 logger.warning(f"🚨 ⚠️ ANOMALY DETECTED! ⚠️ | MSE: {mse:.6f} | True Label: {true_label}")
             else:
-                if j % 10 == 0:  
+                if i % 10 == 0:  
                     logger.info(f"✅ Status Normal | MSE: {mse:.6f} | True Label: {true_label}")
             
             time.sleep(0.02)
-            
-        print("\n" + "="*50)
-        logger.info("🏁 --- STREAM ENDED --- 🏁")
-        logger.info(f"📊 Total Anomalies Detected in Session: {anomalies_caught}")
-        print("="*50)
 
     def analyze_stream(self, data_path: str, num_records: int = 300, progress_callback=None) -> pd.DataFrame:
         """
@@ -214,5 +205,5 @@ class AnomifyLiveDetector:
 if __name__ == "__main__":
     detector = AnomifyLiveDetector()
     loader = SWaTDataLoader()
-    test_file = loader.config['data'].get('test_data_path', '../data/raw/merged.csv')
+    test_file = loader.config['data'].get('test_data_path', 'data/raw/merged.csv')
     detector.simulate_stream(test_file, num_records=300)
