@@ -1,22 +1,11 @@
 """
-Anomify — Streamlit demo app (runs on the local SWaT dataset).
-
-Two tabs:
-  1. Dashboard  - runs merged.csv through the REAL trained
-                  pipeline (preprocess -> feature engineer -> LSTM
-                  autoencoder) and plots reconstruction error per step
-                  against the anomaly threshold. Also shows:
-                    - System Health Score (rolling %)
-                    - Attack Severity (how far MSE exceeds threshold)
-                    - Top sensors driving each anomaly (per-feature MSE)
-  2. Assistant  - chatbot that can answer questions about the project
-                  and the current results on screen.
-
+Anomify — Streamlit demo app
 """
 import os
 import sys
 from pathlib import Path
 
+import requests
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -34,7 +23,6 @@ DATA_PATH = basic_path / "data" / "raw" / "merged.csv"
 
 
 def get_severity(mse: float, threshold: float) -> tuple[str, str]:
-    """Return (label, colour) based on how many times MSE exceeds threshold."""
     ratio = mse / max(threshold, 1e-12)
     if ratio < 1:
         return "Normal ✅", "#2ecc71"
@@ -47,16 +35,8 @@ def get_severity(mse: float, threshold: float) -> tuple[str, str]:
     else:
         return "Critical 🚨", "#8e44ad"
 
-
 def rolling_health(results: pd.DataFrame, window: int = 30) -> pd.Series:
-    """
-    System Health Score per step: percentage of the last `window` steps that
-    were normal, expressed as 0–100.
-    """
     return (1 - results["is_anomaly"].rolling(window, min_periods=1).mean()) * 100
-
-
-#  model loading 
 
 @st.cache_resource(show_spinner="Loading model, scaler, and preprocessing pipeline...")
 def load_detector() -> AnomifyLiveDetector:
@@ -66,9 +46,6 @@ def load_detector() -> AnomifyLiveDetector:
     detector.model_path = models_dir / "autoencoder.keras"
     detector.threshold_path = models_dir / "threshold.yaml"
     return detector
-
-
-# sidebar 
 
 st.sidebar.title("🛰️ Anomify")
 st.sidebar.caption("Real-Time IoT Anomaly Detection")
@@ -83,18 +60,12 @@ except Exception as exc:
     load_error = exc
     st.sidebar.error(f"Model failed to load:\n{exc}")
 
-
 # =============================================================================
 # PAGE 1 — DASHBOARD
 # =============================================================================
-
 def dashboard_page():
     st.title("📊 Anomify — Live Detection Dashboard")
-    st.markdown(
-        "Running the local SWaT dataset — "
-        "this file contains deliberately launched cyberattacks mixed with normal "
-        "operation, used to test detection."
-    )
+    st.markdown("Running the local SWaT dataset — cyberattacks mixed with normal operation.")
 
     if detector is None:
         st.warning(f"Model isn't loaded, so detection can't run.\n\n{load_error}")
@@ -128,12 +99,10 @@ def dashboard_page():
     anomalies = results[results["is_anomaly"]]
     threshold = detector.threshold
 
-    # 1. Summary metrics 
     peak_mse = results["mse"].max()
     severity_label, severity_color = get_severity(peak_mse, threshold)
-    health_now = int(rolling_health(results).iloc[-1])
-
-    m1, m2, m3, m4, m5 = st.columns(5)
+    
+    m1, m2, m3, m4 = st.columns(4)
     m1.metric("Records analyzed", len(results))
     m2.metric("Anomalies flagged", len(anomalies))
     m3.metric("Anomaly rate", f"{len(anomalies) / max(len(results), 1):.1%}")
@@ -141,111 +110,87 @@ def dashboard_page():
 
     st.divider()
 
-    # 2. MSE over time 
     st.subheader("📈 Reconstruction Error Over Time")
     fig_mse = go.Figure()
-    fig_mse.add_trace(go.Scatter(
-        x=results["step"], y=results["mse"], mode="lines",
-        name="Reconstruction error (MSE)", line=dict(color="#133457"),
-    ))
-    fig_mse.add_trace(go.Scatter(
-        x=anomalies["step"], y=anomalies["mse"], mode="markers",
-        name="Flagged anomaly", marker=dict(color="#E45756", size=8, symbol="x"),
-    ))
-    fig_mse.add_hline(
-        y=threshold, line_dash="dash", line_color="gray",
-        annotation_text="Anomaly threshold", annotation_position="top left",
-    )
-    fig_mse.update_layout(
-        xaxis_title="Step", yaxis_title="Reconstruction error (MSE)",
-        height=350, margin=dict(t=10, b=20), legend=dict(orientation="h"),
-    )
+    fig_mse.add_trace(go.Scatter(x=results["step"], y=results["mse"], mode="lines", name="MSE", line=dict(color="#133457")))
+    fig_mse.add_trace(go.Scatter(x=anomalies["step"], y=anomalies["mse"], mode="markers", name="Anomaly", marker=dict(color="#E45756", size=8, symbol="x")))
+    fig_mse.add_hline(y=threshold, line_dash="dash", line_color="gray", annotation_text="Threshold")
+    fig_mse.update_layout(height=350, margin=dict(t=10, b=20))
     st.plotly_chart(fig_mse, use_container_width=True)
 
     st.divider()
 
-    # 3. System Health Score 
     st.subheader("🏥 System Health Score")
-    st.caption("Rolling percentage of normal windows (last 30 steps). 100 = fully healthy, 0 = everything flagged.")
-
     health_series = rolling_health(results, window=30)
     fig_health = go.Figure()
-    fig_health.add_trace(go.Scatter(
-        x=results["step"], y=health_series, mode="lines", fill="tozeroy",
-        name="Health Score",
-        line=dict(color="#2ecc71"),
-        fillcolor="rgba(46,204,113,0.15)",
-    ))
-    fig_health.add_hline(y=80, line_dash="dot", line_color="orange",
-                         annotation_text="Warning threshold (80)", annotation_position="top left")
-    fig_health.add_hline(y=50, line_dash="dot", line_color="red",
-                         annotation_text="Critical threshold (50)", annotation_position="bottom left")
-    fig_health.update_layout(
-        xaxis_title="Step", yaxis_title="Health Score (0–100)",
-        yaxis=dict(range=[0, 105]),
-        height=280, margin=dict(t=10, b=20),
-    )
+    fig_health.add_trace(go.Scatter(x=results["step"], y=health_series, mode="lines", fill="tozeroy", line=dict(color="#2ecc71")))
+    fig_health.add_hline(y=80, line_dash="dot", line_color="orange")
+    fig_health.add_hline(y=50, line_dash="dot", line_color="red")
+    fig_health.update_layout(yaxis=dict(range=[0, 105]), height=280)
     st.plotly_chart(fig_health, use_container_width=True)
 
     st.divider()
 
-    # 4. Attack Severity 
     st.subheader("🚨 Attack Severity")
-    st.caption("Based on how many times the peak MSE exceeds the trained threshold.")
-
     col_sev, col_gauge = st.columns([1, 2])
     with col_sev:
-        st.markdown(
-            f"<div style='background:{severity_color};padding:18px 24px;"
-            f"border-radius:10px;text-align:center;"
-            f"font-size:1.4rem;font-weight:700;color:white;'>"
-            f"{severity_label}</div>",
-            unsafe_allow_html=True,
-        )
-        ratio = peak_mse / max(threshold, 1e-12)
-        st.metric("Peak MSE / Threshold", f"{ratio:.1f}×", delta=None)
-        
+        st.markdown(f"<div style='background:{severity_color};padding:18px;border-radius:10px;text-align:center;color:white;'>{severity_label}</div>", unsafe_allow_html=True)
+        st.metric("Peak MSE / Threshold", f"{peak_mse / max(threshold, 1e-12):.1f}×")
 
     with col_gauge:
-        # Severity breakdown per step
         def step_severity(mse):
             r = mse / max(threshold, 1e-12)
-            if r < 1:   return "Normal"
+            if r < 1: return "Normal"
             elif r < 2: return "Low"
             elif r < 5: return "Medium"
             elif r < 10: return "High"
-            else:        return "Critical"
-
+            else: return "Critical"
         results["severity"] = results["mse"].apply(step_severity)
-        sev_counts = results["severity"].value_counts().reindex(
-            ["Normal", "Low", "Medium", "High", "Critical"], fill_value=0
-        )
-        fig_sev = px.bar(
-            x=sev_counts.index, y=sev_counts.values,
-            color=sev_counts.index,
-            color_discrete_map={
-                "Normal": "#2ecc71", "Low": "#f1c40f",
-                "Medium": "#e67e22", "High": "#e74c3c", "Critical": "#8e44ad",
-            },
-            labels={"x": "Severity Level", "y": "Step count"},
-        )
-        fig_sev.update_layout(
-            showlegend=False, height=260, margin=dict(t=10, b=10),
-        )
+        sev_counts = results["severity"].value_counts().reindex(["Normal", "Low", "Medium", "High", "Critical"], fill_value=0)
+        fig_sev = px.bar(x=sev_counts.index, y=sev_counts.values, color=sev_counts.index, color_discrete_map={"Normal": "#2ecc71", "Low": "#f1c40f", "Medium": "#e67e22", "High": "#e74c3c", "Critical": "#8e44ad"})
+        fig_sev.update_layout(showlegend=False, height=260)
         st.plotly_chart(fig_sev, use_container_width=True)
-
-    st.divider()
-
-
-
 
 # =============================================================================
 # PAGE 2 — ASSISTANT (chatbot)
 # =============================================================================
+def assistant_page():
+    st.title("🤖 Anomify — AI Assistant")
+    st.markdown("هنا تقدر تسأل الـ AI Agent عن حالة النظام، الإنذارات اللي اتسجلت، أو تقارير الهجمات.")
 
+    N8N_WEBHOOK_URL = "http://localhost:5678/webhook/anomify-chat"
 
+    if "messages" not in st.session_state:
+        st.session_state.messages = [{"role": "assistant", "content": "أهلاً بيك! أنا المساعد الذكي، متصل بقاعدة بيانات Anomify. تحب تسأل عن إيه؟"}]
 
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
+    if prompt := st.chat_input("إسأل عن الإنذارات، التقارير..."):
+        st.chat_message("user").markdown(prompt)
+        st.session_state.messages.append({"role": "user", "content": prompt})
 
+        with st.spinner("Agent is querying the database..."):
+            try:
+                payload = {"chatInput": prompt, "sessionId": "anomify_admin"}
+                response = requests.post(N8N_WEBHOOK_URL, json=payload, timeout=20)
+                if response.status_code == 200:
+                    bot_reply = response.json().get("output", "تم استلام الطلب.")
+                else:
+                    bot_reply = f"❌ خطأ من الخادم (n8n): {response.status_code}"
+            except Exception as e:
+                bot_reply = "❌ لم أتمكن من الاتصال بـ n8n. تأكد من تشغيل الـ Workflow."
+
+        with st.chat_message("assistant"):
+            st.markdown(bot_reply)
+        st.session_state.messages.append({"role": "assistant", "content": bot_reply})
+
+# =============================================================================
+# MAIN APP ROUTING
+# =============================================================================
 if __name__ =="__main__":
-    dashboard_page()
+    if page == "📊 Dashboard":
+        dashboard_page()
+    elif page == "🤖 Assistant":
+        assistant_page()

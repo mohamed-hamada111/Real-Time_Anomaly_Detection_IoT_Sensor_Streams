@@ -56,6 +56,6 @@ class SWaTPreProcessor:
     if __name__ == "__main__":
         import h5py
 
-        with h5py.File("../models/autoencoder.h5", "r") as f:
+        with h5py.File("models/autoencoder.h5", "r") as f:
             print(f.attrs.get("keras_version"))
             print(f.attrs.get("backend"))
