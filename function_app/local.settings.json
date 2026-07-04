@@ -1,0 +1,8 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "<set automatically by az functionapp create / leave for local emulator>",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "EVENTHUB_CONNECTION": "<Event Hub namespace connection string - Listen+Send policy>"
+  }
+}

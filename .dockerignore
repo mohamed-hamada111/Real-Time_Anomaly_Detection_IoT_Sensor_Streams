@@ -1,0 +1,6 @@
+.git
+.vscode
+__pycaches__
+*.pyc
+anomify_project/data/raw/*.csv
+.env

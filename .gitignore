@@ -1,0 +1,5 @@
+.env
+*.csv
+data/raw/
+__pycache__/
+*.h5ss
