@@ -212,8 +212,8 @@ def dashboard_page():
             r = mse / max(threshold, 1e-12)
             if r < 1:   return "Normal"
             elif r < 2: return "Low"
-            elif r < 5: return "Medium"
-            elif r < 10: return "High"
+            elif r < 3: return "Medium"
+            elif r < 4: return "High"
             else:        return "Critical"
 
         results["severity"] = results["mse"].apply(step_severity)
@@ -235,6 +235,12 @@ def dashboard_page():
         st.plotly_chart(fig_sev, use_container_width=True)
 
     st.divider()
+
+    # display the table 
+    with st.expander("📋 Raw results table"):
+        display_cols = ["step", "mse", "threshold", "is_anomaly", "severity", "true_label"]
+        st.dataframe(results[[c for c in display_cols if c in results.columns]],
+                        use_container_width=True)
 
 
 
