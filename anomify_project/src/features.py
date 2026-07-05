@@ -21,7 +21,7 @@ class SWaTFeatureEngineer:
             self.config = yaml.safe_load(file)
             
         self.window_size = self.config.get('pipeline', {}).get('rolling_window_size', 300)
-        self.scaler_path = "../models/scaler.pkl" 
+        self.scaler_path = "models/scaler.pkl" 
         self.scaler = MinMaxScaler()
         
         Path("models").mkdir(parents=True, exist_ok=True)
