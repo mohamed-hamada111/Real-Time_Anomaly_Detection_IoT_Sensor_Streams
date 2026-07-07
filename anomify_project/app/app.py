@@ -99,7 +99,7 @@ def load_detector() -> AnomifyLiveDetector:
 
 st.sidebar.markdown("### 🛰️ Anomify")
 st.sidebar.caption("Real-Time IoT Anomaly Detection")
-page = st.sidebar.radio("Navigate", ["📊 Dashboard", "🤖 Assistant"])
+page = st.sidebar.radio("Navigate", ["📈 EDA","📊 Dashboard","🤖 Assistant"])
 st.sidebar.divider()
 
 detector = None
