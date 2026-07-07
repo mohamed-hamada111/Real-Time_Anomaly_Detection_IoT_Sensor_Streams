@@ -99,7 +99,7 @@ def load_detector() -> AnomifyLiveDetector:
 
 st.sidebar.markdown("### 🛰️ Anomify")
 st.sidebar.caption("Real-Time IoT Anomaly Detection")
-page = st.sidebar.radio("Navigate", ["📊 Dashboard", "🤖 Assistant"])
+page = st.sidebar.radio("Navigate", ["📈 EDA","📊 Dashboard","🤖 Assistant"])
 st.sidebar.divider()
 
 detector = None
@@ -114,6 +114,59 @@ except Exception as exc:
 st.sidebar.divider()
 st.sidebar.caption("Autoencoder · Isolation Forest · LSTM")
 st.sidebar.caption("Served via FastAPI · MLflow · Grafana")
+
+
+
+# =============================================================================
+# PAGE 0 — EDA
+# =============================================================================
+def eda_page():
+    st.markdown('<div class="app-header">📈 Exploratory Data Analysis</div>', unsafe_allow_html=True)
+
+    if not DATA_PATH.exists():
+        st.error(f"Dataset not found at: {DATA_PATH}")
+        return
+
+    df = pd.read_csv(DATA_PATH)
+
+    st.subheader("Dataset Preview")
+    st.dataframe(df.head())
+
+    c1, c2 = st.columns(2)
+    c1.metric("Rows", df.shape[0])
+    c2.metric("Columns", df.shape[1])
+
+    st.subheader("Columns")
+    st.write(df.columns.tolist())
+
+    st.subheader("Missing Values")
+    st.dataframe(df.isnull().sum().rename("Missing Values"))
+
+    st.subheader("Summary Statistics")
+    st.dataframe(df.describe())
+
+    numeric_cols = df.select_dtypes(include="number").columns
+
+    if len(numeric_cols) > 0:
+        st.subheader("Correlation Heatmap")
+        corr = df[numeric_cols].corr()
+        fig = px.imshow(corr, text_auto=False, aspect="auto", color_continuous_scale="RdBu_r")
+        st.plotly_chart(fig, use_container_width=True)
+
+        feature = st.selectbox("Choose Feature", numeric_cols)
+
+        st.subheader("Distribution")
+        fig = px.histogram(df, x=feature, nbins=50)
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.subheader("Box Plot")
+        fig = px.box(df, y=feature)
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.subheader("Time Series")
+        fig = px.line(df, y=feature)
+        st.plotly_chart(fig, use_container_width=True)
+
 
 # =============================================================================
 # PAGE 1 — DASHBOARD
@@ -272,7 +325,9 @@ def assistant_page():
 # MAIN APP ROUTING
 # =============================================================================
 if __name__ == "__main__":
-    if page == "📊 Dashboard":
+    if page == "📈 EDA":
+        eda_page()
+    elif page == "📊 Dashboard":
         dashboard_page()
     elif page == "🤖 Assistant":
         assistant_page()
