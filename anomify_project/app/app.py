@@ -1,5 +1,6 @@
 """
 Anomify — Streamlit demo app
+Real-Time IoT Anomaly Detection Dashboard + AI Assistant
 """
 import os
 import sys
@@ -15,28 +16,76 @@ import plotly.express as px
 basic_path = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(basic_path))
 
-from pipelines.inference import AnomifyLiveDetector  
+from pipelines.inference import AnomifyLiveDetector
 
-st.set_page_config(page_title="Anomify", page_icon="🛰️", layout="wide")
+st.set_page_config(
+    page_title="Anomify",
+    page_icon="🛰️",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
 DATA_PATH = basic_path / "data" / "raw" / "merged.csv"
+N8N_WEBHOOK_URL = "http://localhost:5678/webhook/anomify-chat"
+
+# =============================================================================
+# GLOBAL STYLING
+# =============================================================================
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-color: #0e1117;
+    }
+    section[data-testid="stSidebar"] {
+        background-color: #10141c;
+        border-right: 1px solid #1f2430;
+    }
+    .app-header {
+        font-size: 2.1rem;
+        font-weight: 700;
+        color: #f5f6fa;
+        margin-bottom: 0.1rem;
+    }
+    .app-subtitle {
+        color: #8b93a7;
+        font-size: 0.95rem;
+        margin-bottom: 1.4rem;
+    }
+    .severity-badge {
+        padding: 18px;
+        border-radius: 12px;
+        text-align: center;
+        color: white;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    div[data-testid="stChatMessage"] {
+        border-radius: 12px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 
 def get_severity(mse: float, threshold: float) -> tuple[str, str]:
     ratio = mse / max(threshold, 1e-12)
     if ratio < 1:
-        return "Normal ✅", "#2ecc71"
+        return "Normal", "#2ecc71"
     elif ratio < 2:
-        return "Low ⚠️", "#f1c40f"
+        return "Low", "#f1c40f"
     elif ratio < 5:
-        return "Medium 🔶", "#e67e22"
+        return "Medium", "#e67e22"
     elif ratio < 10:
-        return "High 🔴", "#e74c3c"
+        return "High", "#e74c3c"
     else:
-        return "Critical 🚨", "#8e44ad"
+        return "Critical", "#8e44ad"
+
 
 def rolling_health(results: pd.DataFrame, window: int = 30) -> pd.Series:
     return (1 - results["is_anomaly"].rolling(window, min_periods=1).mean()) * 100
+
 
 @st.cache_resource(show_spinner="Loading model, scaler, and preprocessing pipeline...")
 def load_detector() -> AnomifyLiveDetector:
@@ -47,25 +96,87 @@ def load_detector() -> AnomifyLiveDetector:
     detector.threshold_path = models_dir / "threshold.yaml"
     return detector
 
-st.sidebar.title("🛰️ Anomify")
+
+st.sidebar.markdown("### 🛰️ Anomify")
 st.sidebar.caption("Real-Time IoT Anomaly Detection")
-page = st.sidebar.radio("Go to", ["📊 Dashboard", "🤖 Assistant"])
+page = st.sidebar.radio("Navigate", ["📈 EDA","📊 Dashboard","🤖 Assistant"])
+st.sidebar.divider()
 
 detector = None
 load_error = None
 try:
     detector = load_detector()
-    st.sidebar.metric("Active anomaly threshold (MSE)", f"{detector.threshold:.6f}")
+    st.sidebar.metric("Active Anomaly Threshold (MSE)", f"{detector.threshold:.6f}")
 except Exception as exc:
     load_error = exc
     st.sidebar.error(f"Model failed to load:\n{exc}")
+
+st.sidebar.divider()
+st.sidebar.caption("Autoencoder · Isolation Forest · LSTM")
+st.sidebar.caption("Served via FastAPI · MLflow · Grafana")
+
+
+
+# =============================================================================
+# PAGE 0 — EDA
+# =============================================================================
+def eda_page():
+    st.markdown('<div class="app-header">📈 Exploratory Data Analysis</div>', unsafe_allow_html=True)
+
+    if not DATA_PATH.exists():
+        st.error(f"Dataset not found at: {DATA_PATH}")
+        return
+
+    df = pd.read_csv(DATA_PATH)
+
+    st.subheader("Dataset Preview")
+    st.dataframe(df.head())
+
+    c1, c2 = st.columns(2)
+    c1.metric("Rows", df.shape[0])
+    c2.metric("Columns", df.shape[1])
+
+    st.subheader("Columns")
+    st.write(df.columns.tolist())
+
+    st.subheader("Missing Values")
+    st.dataframe(df.isnull().sum().rename("Missing Values"))
+
+    st.subheader("Summary Statistics")
+    st.dataframe(df.describe())
+
+    numeric_cols = df.select_dtypes(include="number").columns
+
+    if len(numeric_cols) > 0:
+        st.subheader("Correlation Heatmap")
+        corr = df[numeric_cols].corr()
+        fig = px.imshow(corr, text_auto=False, aspect="auto", color_continuous_scale="RdBu_r")
+        st.plotly_chart(fig, use_container_width=True)
+
+        feature = st.selectbox("Choose Feature", numeric_cols)
+
+        st.subheader("Distribution")
+        fig = px.histogram(df, x=feature, nbins=50)
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.subheader("Box Plot")
+        fig = px.box(df, y=feature)
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.subheader("Time Series")
+        fig = px.line(df, y=feature)
+        st.plotly_chart(fig, use_container_width=True)
+
 
 # =============================================================================
 # PAGE 1 — DASHBOARD
 # =============================================================================
 def dashboard_page():
-    st.title("📊 Anomify — Live Detection Dashboard")
-    st.markdown("Running the local SWaT dataset — cyberattacks mixed with normal operation.")
+    st.markdown('<div class="app-header">📊 Live Detection Dashboard</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="app-subtitle">Streaming the local SWaT dataset — cyberattacks mixed with normal operation.</div>',
+        unsafe_allow_html=True,
+    )
 
     if detector is None:
         st.warning(f"Model isn't loaded, so detection can't run.\n\n{load_error}")
@@ -83,7 +194,7 @@ def dashboard_page():
             str(DATA_PATH),
             num_records=int(num_records),
             progress_callback=lambda p: progress_bar.progress(
-                p, text=f"Scoring stream... {int(p*100)}%"
+                p, text=f"Scoring stream... {int(p * 100)}%"
             ),
         )
         st.session_state["results"] = results
@@ -101,11 +212,11 @@ def dashboard_page():
 
     peak_mse = results["mse"].max()
     severity_label, severity_color = get_severity(peak_mse, threshold)
-    
+
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Records analyzed", len(results))
-    m2.metric("Anomalies flagged", len(anomalies))
-    m3.metric("Anomaly rate", f"{len(anomalies) / max(len(results), 1):.1%}")
+    m1.metric("Records Analyzed", len(results))
+    m2.metric("Anomalies Flagged", len(anomalies))
+    m3.metric("Anomaly Rate", f"{len(anomalies) / max(len(results), 1):.1%}")
     m4.metric("Peak MSE", f"{peak_mse:.6f}")
 
     st.divider()
@@ -134,63 +245,89 @@ def dashboard_page():
     st.subheader("🚨 Attack Severity")
     col_sev, col_gauge = st.columns([1, 2])
     with col_sev:
-        st.markdown(f"<div style='background:{severity_color};padding:18px;border-radius:10px;text-align:center;color:white;'>{severity_label}</div>", unsafe_allow_html=True)
+        st.markdown(
+            f"<div class='severity-badge' style='background:{severity_color};'>{severity_label}</div>",
+            unsafe_allow_html=True,
+        )
         st.metric("Peak MSE / Threshold", f"{peak_mse / max(threshold, 1e-12):.1f}×")
 
     with col_gauge:
         def step_severity(mse):
             r = mse / max(threshold, 1e-12)
-            if r < 1: return "Normal"
-            elif r < 2: return "Low"
-            elif r < 5: return "Medium"
-            elif r < 10: return "High"
-            else: return "Critical"
+            if r < 1:
+                return "Normal"
+            elif r < 2:
+                return "Low"
+            elif r < 5:
+                return "Medium"
+            elif r < 10:
+                return "High"
+            else:
+                return "Critical"
+
         results["severity"] = results["mse"].apply(step_severity)
-        sev_counts = results["severity"].value_counts().reindex(["Normal", "Low", "Medium", "High", "Critical"], fill_value=0)
-        fig_sev = px.bar(x=sev_counts.index, y=sev_counts.values, color=sev_counts.index, color_discrete_map={"Normal": "#2ecc71", "Low": "#f1c40f", "Medium": "#e67e22", "High": "#e74c3c", "Critical": "#8e44ad"})
+        sev_counts = results["severity"].value_counts().reindex(
+            ["Normal", "Low", "Medium", "High", "Critical"], fill_value=0
+        )
+        fig_sev = px.bar(
+            x=sev_counts.index,
+            y=sev_counts.values,
+            color=sev_counts.index,
+            color_discrete_map={"Normal": "#2ecc71", "Low": "#f1c40f", "Medium": "#e67e22", "High": "#e74c3c", "Critical": "#8e44ad"},
+        )
         fig_sev.update_layout(showlegend=False, height=260)
         st.plotly_chart(fig_sev, use_container_width=True)
+
 
 # =============================================================================
 # PAGE 2 — ASSISTANT (chatbot)
 # =============================================================================
 def assistant_page():
-    st.title("🤖 Anomify — AI Assistant")
-    st.markdown("هنا تقدر تسأل الـ AI Agent عن حالة النظام، الإنذارات اللي اتسجلت، أو تقارير الهجمات.")
-
-    N8N_WEBHOOK_URL = "http://localhost:5678/webhook/anomify-chat"
+    st.markdown('<div class="app-header">🤖 AI Assistant</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="app-subtitle">Ask the AI Agent about system status, logged alerts, or attack reports.</div>',
+        unsafe_allow_html=True,
+    )
 
     if "messages" not in st.session_state:
-        st.session_state.messages = [{"role": "assistant", "content": "أهلاً بيك! أنا المساعد الذكي، متصل بقاعدة بيانات Anomify. تحب تسأل عن إيه؟"}]
+        st.session_state.messages = [
+            {
+                "role": "assistant",
+                "content": "Hi! I'm your Anomify assistant, connected live to the alerts database. What would you like to know?",
+            }
+        ]
 
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    if prompt := st.chat_input("إسأل عن الإنذارات، التقارير..."):
+    if prompt := st.chat_input("Ask about alerts, reports, or system status..."):
         st.chat_message("user").markdown(prompt)
         st.session_state.messages.append({"role": "user", "content": prompt})
 
         with st.spinner("Agent is querying the database..."):
             try:
                 payload = {"chatInput": prompt, "sessionId": "anomify_admin"}
-                response = requests.post(N8N_WEBHOOK_URL, json=payload, timeout=20)
+                response = requests.post(N8N_WEBHOOK_URL, json=payload, timeout=30)
                 if response.status_code == 200:
-                    bot_reply = response.json().get("output", "تم استلام الطلب.")
+                    bot_reply = response.json().get("output", "Request received.")
                 else:
-                    bot_reply = f"❌ خطأ من الخادم (n8n): {response.status_code}"
-            except Exception as e:
-                bot_reply = "❌ لم أتمكن من الاتصال بـ n8n. تأكد من تشغيل الـ Workflow."
+                    bot_reply = f"❌ Error from server (n8n): {response.status_code}"
+            except Exception:
+                bot_reply = "❌ Couldn't reach n8n. Make sure the workflow is running and active."
 
         with st.chat_message("assistant"):
             st.markdown(bot_reply)
         st.session_state.messages.append({"role": "assistant", "content": bot_reply})
 
+
 # =============================================================================
 # MAIN APP ROUTING
 # =============================================================================
-if __name__ =="__main__":
-    if page == "📊 Dashboard":
+if __name__ == "__main__":
+    if page == "📈 EDA":
+        eda_page()
+    elif page == "📊 Dashboard":
         dashboard_page()
     elif page == "🤖 Assistant":
         assistant_page()
