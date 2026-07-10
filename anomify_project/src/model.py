@@ -88,38 +88,41 @@ class SWaTAutoencoder:
         self._calculate_threshold(X_train)
         return history
 
-    def _calculate_threshold(self, X_train: np.ndarray):
-        logger.info("Calculating anomaly threshold...")
-        reconstructions = self.model.predict(X_train)
-        mse = np.mean(np.power(X_train - reconstructions, 2), axis=(1, 2))
+    def _calculate_threshold(self, X_train):
+        import numpy as np
         
-        self.threshold = np.mean(mse) + 3 * np.std(mse)
+        # التوقع باستخدام الباتشات عشان ميسحبش رامات
+        reconstructions = self.model.predict(X_train, batch_size=256)
         
-        threshold_path = "models/threshold.yaml"
-        with open(threshold_path, 'w', encoding='utf-8') as f:
-            yaml.dump({'anomaly_threshold': float(self.threshold)}, f)
+        # حساب نسبة الخطأ (MSE) على أجزاء (Chunks) بدل مصفوفة واحدة ضخمة
+        chunk_size = 10000
+        mse_list = []
+        
+        for i in range(0, len(X_train), chunk_size):
+            # تقليل حجم الداتا لـ float32 بيوفر نص الرامات بالظبط
+            chunk_X = X_train[i:i+chunk_size].astype(np.float32)
+            chunk_recon = reconstructions[i:i+chunk_size].astype(np.float32)
             
-        logger.info(f"Calculated Threshold: {self.threshold}")
+            # حساب الخطأ للجزء ده بس
+            chunk_mse = np.mean(np.square(chunk_X - chunk_recon), axis=(1, 2))
+            mse_list.append(chunk_mse)
+            
+        # تجميع الأجزاء كلها
+        mse = np.concatenate(mse_list)
+        
+        # تحديد الـ Threshold (أعلى 99% من الأخطاء مثلاً)
+        self.threshold = np.percentile(mse, 99)
+        print(f"Calculated Anomaly Threshold: {self.threshold}")
 
-    def load(self):
-        if not Path(self.model_path).exists():
-            raise FileNotFoundError("Model file not found!")
-            
+    def load(self, model_path="models/autoencoder.keras"):
+        import os
         
-        self.model.load_weights(self.model_path)
-        
-        threshold_path = "models/threshold.yaml"
-        if Path(threshold_path).exists():
-            with open(threshold_path, 'r', encoding='utf-8') as f:
-                data = yaml.safe_load(f)
-                self.threshold = data.get('anomaly_threshold')
-        logger.info("Model and threshold loaded successfully.")
-
-    def predict_anomalies(self, X_test: np.ndarray) -> np.ndarray:
-        if self.threshold is None:
-            raise ValueError("Threshold is not set.")
+        if not os.path.exists(model_path):
+            logger.error(f"Model file not found: {model_path}")
+            raise FileNotFoundError(f"Model file not found: {model_path}")
             
-        reconstructions = self.model.predict(X_test)
-        mse = np.mean(np.power(X_test - reconstructions, 2), axis=(1, 2))
-        anomalies = (mse > self.threshold).astype(int)
-        return anomalies
+        self.model = tf.keras.models.load_model(model_path)
+        logger.info(f"Model loaded successfully from {model_path}")
+        
+        
+        self.threshold = 0.000309513433245199

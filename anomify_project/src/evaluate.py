@@ -51,7 +51,18 @@ def run_evaluation():
         reconstructions = autoencoder.model.predict(X_test_seq)
         
         
-        mse = np.mean(np.power(X_test_seq - reconstructions, 2), axis=(1, 2))
+        # حساب نسبة الخطأ (MSE) على أجزاء (Chunks) عشان منتجاوزش الرامات
+        chunk_size = 10000
+        mse_list = []
+        
+        for i in range(0, len(X_test_seq), chunk_size):
+            chunk_X = X_test_seq[i:i+chunk_size].astype(np.float32)
+            chunk_recon = reconstructions[i:i+chunk_size].astype(np.float32)
+            
+            chunk_mse = np.mean(np.square(chunk_X - chunk_recon), axis=(1, 2))
+            mse_list.append(chunk_mse)
+            
+        mse = np.concatenate(mse_list)
         
         logger.info("Calculating optimal threshold to maximize F1-Score...")
         best_f1 = 0
