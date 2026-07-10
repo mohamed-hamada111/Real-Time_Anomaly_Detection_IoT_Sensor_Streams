@@ -1,6 +1,12 @@
 .git
+.gitignore
 .vscode
 __pycaches__
+__pycache__/
 *.pyc
 anomify_project/data/raw/*.csv
 .env
+.env/
+.ipynb_checkpoints/
+.vscode/
+.idea/

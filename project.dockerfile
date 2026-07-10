@@ -13,11 +13,10 @@ WORKDIR /home/site/wwwroot
 
 # get the dependencies of the project 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --default-timeout=1000 --no-cache-dir -r requirements.txt
 
 # copy the code of the project
 COPY anomify_project/configs ./project/configs
-COPY anomify_project/data  ./project/data
 COPY anomify_project/models ./project/models
 COPY anomify_project/pipelines ./project/pipelines
 COPY anomify_project/src ./project/src
@@ -26,4 +25,3 @@ COPY function_app/host.json .
 COPY function_app/function_app.py .
 
 
-CMD ["python", "anomify_project/pipelines/inference.py"]
