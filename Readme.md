@@ -180,31 +180,31 @@ Dashboard   Alert → n8n Webhook → Groq LLM ChatOps
 # 📊 UML & Design Diagrams
 
 ## 🧩 Class Diagram
-<img src="docs/ClassDiagram.png">
+<img src="docs/ClassDiagram.jpg">
 
 ## 🎯 Use Case Diagram
-<img src="docs/UseCaseDiagram.png">
+<img src="docs/UseCaseDiagram.jpg">
 
 ## 🔄 Activity Diagram
-<img src="docs/ActivityDiagram.png">
+<img src="docs/activity.jpg">
 
 ## ⏱ Sequence Diagram — Model Training
-<img src="docs/SequenceDiagram1.png">
+<img src="docs/sequence.jpg">
 
 ## ⏱ Sequence Diagram — Real-Time Inference
-<img src="docs/SequenceDiagram2.png">
+<img src="docs/seq2.jpg">
 
 ## ⏱ Sequence Diagram — Alert & ChatOps Agent
-<img src="docs/SequenceDiagram3.png">
+<img src="docs/sequence3.jpg">
 
 ## 🧱 Component Diagram
-<img src="docs/ComponentDiagram.png">
+<img src="docs\ComponentDiagram.jpg">
 
 ## 🖥 Deployment Diagram
-<img src="docs/DeploymentDiagram.png">
+<img src="docs\DeploymentDiagram.jpg">
 
 ## 🗄 ER Diagram (Anomaly Log Store)
-<img src="docs/ERDiagram.png">
+<img src="docs\ErDiagram.jpg">
 
 ---
 
@@ -254,11 +254,11 @@ Load SWaT Dataset (Normal + Attack)
 
 | Metric | Value |
 |---|---:|
-| Accuracy | XX % |
-| Precision | XX % |
-| Recall | XX % |
-| F1 Score | XX % |
-| ROC-AUC | XX % |
+| Accuracy | 97.90% |
+| Precision | 88.42% |
+| Recall | 73.23% |
+| F1 Score | 80.11% |
+| ROC-AUC | N/A |
 
 *(Populate from `pipelines/train_pipeline.py` evaluation output on the SWaT attack split.)*
 
@@ -350,9 +350,11 @@ python -m streamlit run app.py
 
 | Name | Role |
 |---|---|
-| Mazen Yehia Zaki | Machine Learning Engineer |
-| Team Members | Backend, Frontend, DevOps, QA |
-
+| Mazen Yehia | Machine Learning Engineer |
+| Marwan Nasser | Full-Stack Dashboard Developer & Azure Cloud Deployment |
+| Mohamed Hamada | Full-Stack Dashboard Developer & Azure Cloud Deployment |
+| Ahmed Salah | Data Preprocessing, Technical Documentation & Presentation |
+| Mina Nabil | Exploratory Data Analysis (EDA) & Data Visualization |
 ---
 
 # 🔮 Future Roadmap
