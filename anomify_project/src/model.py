@@ -125,4 +125,4 @@ class SWaTAutoencoder:
         logger.info(f"Model loaded successfully from {model_path}")
         
         
-        self.threshold = 0.000309513433245199
+        self.threshold = 0.00509513433245199
