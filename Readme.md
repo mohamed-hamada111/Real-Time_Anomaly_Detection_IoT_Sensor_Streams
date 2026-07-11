@@ -180,31 +180,31 @@ Dashboard   Alert → n8n Webhook → Groq LLM ChatOps
 # 📊 UML & Design Diagrams
 
 ## 🧩 Class Diagram
-<img src="docs/ClassDiagram.png">
+<img src="F:\final project\Real-Time_Anomaly_Detection_IoT_Sensor_Streams\docs\class diagram.jpg">
 
 ## 🎯 Use Case Diagram
-<img src="docs/UseCaseDiagram.png">
+<img src="F:\final project\Real-Time_Anomaly_Detection_IoT_Sensor_Streams\docs\use case diagram.jpg">
 
 ## 🔄 Activity Diagram
-<img src="docs/ActivityDiagram.png">
+<img src="F:\final project\Real-Time_Anomaly_Detection_IoT_Sensor_Streams\docs\activity.jpg">
 
 ## ⏱ Sequence Diagram — Model Training
-<img src="docs/SequenceDiagram1.png">
+<img src="F:\final project\Real-Time_Anomaly_Detection_IoT_Sensor_Streams\docs\sequence.jpg">
 
 ## ⏱ Sequence Diagram — Real-Time Inference
-<img src="docs/SequenceDiagram2.png">
+<img src="F:\final project\Real-Time_Anomaly_Detection_IoT_Sensor_Streams\docs\seq2.jpg">
 
 ## ⏱ Sequence Diagram — Alert & ChatOps Agent
-<img src="docs/SequenceDiagram3.png">
+<img src="F:\final project\Real-Time_Anomaly_Detection_IoT_Sensor_Streams\docs\sequence3.jpg">
 
 ## 🧱 Component Diagram
-<img src="docs/ComponentDiagram.png">
+<img src="F:\final project\Real-Time_Anomaly_Detection_IoT_Sensor_Streams\docs\Component diagram.jpg">
 
 ## 🖥 Deployment Diagram
-<img src="docs/DeploymentDiagram.png">
+<img src="F:\final project\Real-Time_Anomaly_Detection_IoT_Sensor_Streams\docs\deployment diagram.jpg">
 
 ## 🗄 ER Diagram (Anomaly Log Store)
-<img src="docs/ERDiagram.png">
+<img src="F:\final project\Real-Time_Anomaly_Detection_IoT_Sensor_Streams\docs\Er Diagram.jpg">
 
 ---
 
