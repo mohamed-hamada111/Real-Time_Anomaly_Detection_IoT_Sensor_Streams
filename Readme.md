@@ -254,11 +254,11 @@ Load SWaT Dataset (Normal + Attack)
 
 | Metric | Value |
 |---|---:|
-| Accuracy | XX % |
-| Precision | XX % |
-| Recall | XX % |
-| F1 Score | XX % |
-| ROC-AUC | XX % |
+| Accuracy | 97.90% |
+| Precision | 88.42% |
+| Recall | 73.23% |
+| F1 Score | 80.11% |
+| ROC-AUC | N/A |
 
 *(Populate from `pipelines/train_pipeline.py` evaluation output on the SWaT attack split.)*
 
@@ -350,9 +350,11 @@ python -m streamlit run app.py
 
 | Name | Role |
 |---|---|
-| Mazen Yehia Zaki | Machine Learning Engineer |
-| Team Members | Backend, Frontend, DevOps, QA |
-
+| Mazen Yehia | Machine Learning Engineer |
+| Marwan Nasser | Full-Stack Dashboard Developer & Azure Cloud Deployment |
+| Mohamed Hamada | Full-Stack Dashboard Developer & Azure Cloud Deployment |
+| Ahmed Salah | Data Preprocessing, Technical Documentation & Presentation |
+| Mina Nabil | Exploratory Data Analysis (EDA) & Data Visualization |
 ---
 
 # 🔮 Future Roadmap
