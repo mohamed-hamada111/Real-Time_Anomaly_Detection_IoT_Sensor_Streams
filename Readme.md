@@ -32,7 +32,7 @@
 
 # 📖 Overview
 
-**Anomify** is a decoupled, production-grade MLOps system for detecting cyberattacks hidden inside industrial IoT sensor telemetry. Built on the **SWaT (Secure Water Treatment)** dataset — 51 sensor/actuator channels across 6 process stages — the system learns the reconstruction manifold of *normal* plant behavior using a custom deep **Autoencoder**, and flags any sample whose reconstruction error exceeds a statistically calibrated threshold.
+**H.A.R.E.S** is a decoupled, production-grade MLOps system for detecting cyberattacks hidden inside industrial IoT sensor telemetry. Built on the **SWaT (Secure Water Treatment)** dataset — 51 sensor/actuator channels across 6 process stages — the system learns the reconstruction manifold of *normal* plant behavior using a custom deep **Autoencoder**, and flags any sample whose reconstruction error exceeds a statistically calibrated threshold.
 
 The pipeline separates offline model training from real-time inference: a FastAPI backend continuously scores incoming sensor streams, a Streamlit dashboard visualizes anomalies live, and an **n8n + Groq LLM ChatOps agent** lets operators query the anomaly history in plain English — no SQL required.
 
