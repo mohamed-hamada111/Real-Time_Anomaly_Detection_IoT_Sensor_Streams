@@ -1,5 +1,5 @@
 """
-Anomify — Streamlit demo app
+H.A.R.E.S — Streamlit demo app
 Real-Time IoT Anomaly Detection Dashboard + AI Assistant
 """
 import os
@@ -19,7 +19,7 @@ sys.path.insert(0, str(basic_path))
 from pipelines.inference import AnomifyLiveDetector
 
 st.set_page_config(
-    page_title="Anomify",
+    page_title="H.A.R.E.S",
     page_icon="🛰️",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -97,7 +97,7 @@ def load_detector() -> AnomifyLiveDetector:
     return detector
 
 
-st.sidebar.markdown("### 🛰️ Anomify")
+st.sidebar.markdown("### 🛰️ H.A.R.E.S")
 st.sidebar.caption("Real-Time IoT Anomaly Detection")
 page = st.sidebar.radio("Navigate", ["📈 EDA","📊 Dashboard","🤖 Assistant"])
 st.sidebar.divider()
@@ -293,7 +293,7 @@ def assistant_page():
         st.session_state.messages = [
             {
                 "role": "assistant",
-                "content": "Hi! I'm your Anomify assistant, connected live to the alerts database. What would you like to know?",
+                "content": "Hi! I'm your H.A.R.E.S assistant, connected live to the alerts database. What would you like to know?",
             }
         ]
 

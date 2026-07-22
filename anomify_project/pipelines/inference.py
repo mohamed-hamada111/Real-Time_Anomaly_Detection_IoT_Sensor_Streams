@@ -25,7 +25,7 @@ class AnomifyLiveDetector:
         self.threshold_path = base_path / "models" / "threshold.yaml"
         print(f"the model path: {self.model_path}")
 
-        logger.info("⚙️ Initializing Anomify Real-Time Detector...")
+        logger.info("⚙️ Initializing H.A.R.E.S Real-Time Detector...")
         self.model = load_model(str(self.model_path), compile=False)
         
         with open(self.threshold_path, "r", encoding='utf-8') as f:

@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚡ Anomify: Real-Time IoT Anomaly Detection
+# ⚡ H.A.R.E.S: Real-Time IoT Anomaly Detection
 
 ### Production-Grade AI System for Detecting Cyberattacks in Industrial Sensor Streams
 
@@ -234,19 +234,11 @@ Load SWaT Dataset (Normal + Attack)
 
 ---
 
-# 📸 Screenshots
+# 🎥 Live Demo
 
-## Live Dashboard
-<img src="docs/dashboard.png">
-
-## Anomaly Prediction
-<img src="docs/prediction.png">
-
-## Alert Management
-<img src="docs/alerts.png">
-
-## ChatOps Assistant
-<img src="docs/chatbot.png">
+**Watch H.A.R.E.S in action:**
+[👉 Click here to watch the full Video Demo]
+https://drive.google.com/drive/folders/1Ej9WSca-w_sl9-NUFifAmo51mS7lY6nF
 
 ---
 

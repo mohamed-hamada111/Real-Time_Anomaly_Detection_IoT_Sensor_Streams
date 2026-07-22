@@ -43,7 +43,7 @@ BASE_DIR = Path(__file__).parent
 MODEL_PATH = BASE_DIR / "models" / "autoencoder.keras"
 THRESHOLD_PATH = BASE_DIR / "models" / "threshold.yaml"
 
-print("⚙️ Loading Anomify Model & Threshold into Server Memory...")
+print("⚙️ Loading H.A.R.E.S Model & Threshold into Server Memory...")
 model = load_model(str(MODEL_PATH), compile=False)
 
 with open(THRESHOLD_PATH, 'r', encoding='utf-8') as f:
@@ -55,7 +55,7 @@ print(f"✅ Server Ready! Active Threshold: {THRESHOLD:.6f}")
 # 3. إعدادات السيرفر (FastAPI)
 # ==========================================
 app = FastAPI(
-    title="Anomify IoT Control API", 
+    title="H.A.R.E.S IoT Control API", 
     description="REST API for Real-Time Anomaly Detection using LSTM-Attention"
 )
 
@@ -68,7 +68,7 @@ class AnomalyLog(BaseModel):
     threshold: float
 
 def log_anomaly_to_db(mse: float, threshold: float):
-    """دالة خفيفة بتسجل الإنذار في الداتابيز في الخلفية"""
+    """function to log detected anomalies into the SQLite database"""
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -116,7 +116,7 @@ def predict_anomaly(data: SensorWindow, background_tasks: BackgroundTasks):
 # ==========================================
 @app.post("/log_anomaly")
 def log_anomaly_endpoint(data: AnomalyLog, background_tasks: BackgroundTasks):
-    """مسار بيستقبل الإنذارات من Streamlit ويسجلها في الداتابيز"""
+    """function to log detected anomalies into the SQLite database"""
     background_tasks.add_task(log_anomaly_to_db, data.mse_score, data.threshold)
     return {"status": "success", "message": "Anomaly logged to SQLite successfully"}
 # ==========================================
@@ -124,7 +124,7 @@ def log_anomaly_endpoint(data: AnomalyLog, background_tasks: BackgroundTasks):
 # ==========================================
 @app.get("/get_alerts")
 def get_recent_alerts():
-    """مسار بيبعت أحدث 50 إنذار لأي نظام بيطلبه زي n8n"""
+    """function to retrieve the most recent alerts from the SQLite database"""
     conn = sqlite3.connect(DB_FILE)
     conn.row_factory = sqlite3.Row  # عشان نرجع الداتا كـ Dictionary
     cursor = conn.cursor()
